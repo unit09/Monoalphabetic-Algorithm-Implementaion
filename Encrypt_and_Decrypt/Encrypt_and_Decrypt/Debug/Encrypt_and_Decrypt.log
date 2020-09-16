@@ -1,0 +1,5 @@
+﻿  source.cpp
+d:\+source\encrypt and decrypt\encrypt_and_decrypt\source.cpp(69): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+d:\+source\encrypt and decrypt\encrypt_and_decrypt\source.cpp(110): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+  Encrypt_and_Decrypt.vcxproj -> D:\+Source\Encrypt and Decrypt\Debug\Encrypt_and_Decrypt.exe
+  Encrypt_and_Decrypt.vcxproj -> D:\+Source\Encrypt and Decrypt\Debug\Encrypt_and_Decrypt.pdb (Partial PDB)
