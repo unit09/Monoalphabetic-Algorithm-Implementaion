@@ -41,6 +41,34 @@ const double ALPHABET_FREQUENCY[ALPHABET_SIZE] = { //영어 알파벳 빈도 수 통계 (%
 	1.974,
 	0.074
 };
+const double DOUBLE_ALPHABET_FREQUENCY[ALPHABET_SIZE] = { //aa ~ zz 연속 알파벳 빈도 수 통계 (%)
+	1.24,
+	0.73,
+	3.71,
+	3.03,
+	10.43,
+	5.43,
+	2.61,
+	0.26,
+	0.73,
+	0.01,
+	0.74,
+	16.11,
+	5.30,
+	5.00,
+	8.38,
+	4.36,
+	0.00,
+	6.10,
+	17.59,
+	7.46,
+	0.18,
+	0.03,
+	0.12,
+	0.02,
+	0.09,
+	0.33
+};
 
 
 
@@ -196,7 +224,8 @@ string replace_all(__in const std::string &message, __in const std::string &patt
 	return result;
 }
 
-string findHighestCountStringInVector(map<string, int> m) {
+//map에서 가장 자주 나온 문자 반환
+string findHighestCountStringInMap(map<string, int> m) {
 	string highestStr = m.begin()->first;
 	int highestVal = m.begin()->second;
 	
@@ -210,12 +239,35 @@ string findHighestCountStringInVector(map<string, int> m) {
 	return highestStr;
 }
 
+//map에서 가장 적게 나온 문자 반환 (value가 음수인 것은 제외. 왜냐하면 2번째로 작은 문자를 찾기 위해서 첫 번째로 적게 나온 문자의 value를 -1로 수정하는 경우가 있기 때문에)
+string findLowestCountStringInMap(map<string, int> m) {
+	string lowestStr = m.begin()->first;
+	int lowestVal = m.begin()->second;
+
+	for (auto i = m.begin(); i != m.end(); i++) {
+		if (lowestVal > i->second && i->second >= 0) {
+			lowestStr = i->first;
+			lowestVal = i->second;
+		}
+	}
+
+	return lowestStr;
+}
+
 //A는 암호문이고 대문자, a는 평문이고 소문자 (추측값), weight는 가중치 (0 ~ 100 사이 정수, 100일 경우 100%, 0일 경우 확률 그대로)
 void increaseProbability(char A, char a, int weight, double prob[ALPHABET_SIZE][ALPHABET_SIZE]) {
 	int indexOfA = charToIndex(A);
 	int indexOfa = charToIndex(a);
-
+	
 	prob[indexOfA][indexOfa] += (100.0 - prob[indexOfA][indexOfa]) / 100.0 * weight;
+}
+
+//A는 암호문이고 대문자, a는 평문이고 소문자 (추측값), weight는 가중치 (0 ~ 100 사이 유리수, 100.0일 경우 100%, 0.0일 경우 확률 그대로), decimalCountOfWeight는 weight의 소수점 자리 개수. 1.23이면 2이다.
+void increaseProbability(char A, char a, double weight, int decimalCountOfWeight, double prob[ALPHABET_SIZE][ALPHABET_SIZE]) {
+	int indexOfA = charToIndex(A);
+	int indexOfa = charToIndex(a);
+
+	prob[indexOfA][indexOfa] += (100.0 - prob[indexOfA][indexOfa]) / pow(100.0, (double) decimalCountOfWeight) * weight;
 }
 
 //A는 암호문이고 대문자, a는 평문이고 소문자 (추측값), weight는 가중치 (0 ~ 100 사이 정수, 100일 경우 0%, 0일 경우 확률 그대로)
@@ -298,7 +350,7 @@ void improveProbabilityBy_the(string enctxt, double prob[ALPHABET_SIZE][ALPHABET
 	}
 
 	if (threeStringCount.size() > 0) {
-		string maybe_the = findHighestCountStringInVector(threeStringCount); //아마 the일 것으로 추측되는 string
+		string maybe_the = findHighestCountStringInMap(threeStringCount); //아마 the일 것으로 추측되는 string
 		char maybe_e = findResonableCharacter('e', prob);
 
 		if (maybe_e == maybe_the[2]) { //ex) 가장 많이 나온 문자가 K인데 가장 많이 나온 3글자 단어의 마지막도 K이면 -> e 거의 확실시, 앞의 두 글자도 t, h 확실시
@@ -323,19 +375,19 @@ void improveProbabilityBy_i_and_a(string enctxt, double prob[ALPHABET_SIZE][ALPH
 
 	if (singleStringCount.size() > 0) {
 		//문자열에서 가장 자주 등장한 1자리 단어를 찾는다 -> a, i일 가능성 높여준다
-		string most1 = findHighestCountStringInVector(singleStringCount);
+		string most1 = findHighestCountStringInMap(singleStringCount);
 		if (prob[charToIndex(most1[0])]['a'] > prob[charToIndex(most1[0])]['i']) {
 			increaseProbability(most1[0], 'a', 90, prob);
 
 			singleStringCount[most1] = -1;
-			string most2 = findHighestCountStringInVector(singleStringCount);
+			string most2 = findHighestCountStringInMap(singleStringCount);
 			increaseProbability(most2[0], 'i', 90, prob);
 		}
 		else {
 			increaseProbability(most1[0], 'i', 90, prob);
 
 			singleStringCount[most1] = -1;
-			string most2 = findHighestCountStringInVector(singleStringCount);
+			string most2 = findHighestCountStringInMap(singleStringCount);
 			increaseProbability(most2[0], 'a', 90, prob);
 		}
 	}
@@ -522,6 +574,75 @@ void improveProbabilityBy_covid19(string enctxt, double prob[ALPHABET_SIZE][ALPH
 	}
 }
 
+//txt안에 wantToTest가 몇 번 등장하는지
+int countString(string txt, string wantToTest) {
+	int index = -1;
+	int counter = 0;
+
+	while ((index = txt.find(wantToTest, index + 1)) != string::npos) {
+		counter++;
+	}
+
+	return counter;
+}
+
+//AA~ZZ 중에서 가장 자주 나온 문자 2개는 s와 l일 확률을 높이고, 가장 적게 나온 문자 4개는 v x j q일 확률을 높인다 (영어에서 ss와 ll이 가장 자주 나올 확률이 높고, qq가 제일 낮으며 그 다음이 jj xx vv)
+void improveProbabilityBy_double_alphabet(string enctxt, double prob[ALPHABET_SIZE][ALPHABET_SIZE]) {
+	
+	string wantToTest = "AA";
+	map<string, int> doubleFreq;
+
+	do {
+		int counter = countString(enctxt, wantToTest);
+		doubleFreq[wantToTest]++;
+
+		wantToTest[0]++;
+		wantToTest[1]++;
+	} while (wantToTest != "[["); //ZZ 다음이 [[임
+
+	//가장 자주 나온 문자
+	string most1 = findHighestCountStringInMap(doubleFreq);
+	increaseProbability(most1[0], 's', 30, prob);
+	increaseProbability(most1[0], 'l', 25, prob);
+
+	//2번째 자주 나온 문자
+	doubleFreq[most1] = -1;
+	string most2 = findHighestCountStringInMap(doubleFreq);
+	increaseProbability(most1[0], 's', 25, prob);
+	increaseProbability(most1[0], 'l', 30, prob);
+
+	//가장 적게 나온 문자
+	string lowest1 = findLowestCountStringInMap(doubleFreq);
+	increaseProbability(lowest1[0], 'q', 30, prob);
+	increaseProbability(lowest1[0], 'j', 30, prob);
+	increaseProbability(lowest1[0], 'x', 30, prob);
+	increaseProbability(lowest1[0], 'v', 30, prob);
+
+	//2번째 적게 나온 문자
+	doubleFreq[lowest1] = -1;
+	string lowest2 = findLowestCountStringInMap(doubleFreq);
+	increaseProbability(lowest2[0], 'q', 30, prob);
+	increaseProbability(lowest2[0], 'j', 30, prob);
+	increaseProbability(lowest2[0], 'x', 30, prob);
+	increaseProbability(lowest2[0], 'v', 30, prob);
+
+	//3번째 적게 나온 문자
+	doubleFreq[lowest2] = -1;
+	string lowest3 = findLowestCountStringInMap(doubleFreq);
+	increaseProbability(lowest3[0], 'q', 30, prob);
+	increaseProbability(lowest3[0], 'j', 30, prob);
+	increaseProbability(lowest3[0], 'x', 30, prob);
+	increaseProbability(lowest3[0], 'v', 30, prob);
+
+	//4번째 적게 나온 문자
+	doubleFreq[lowest3] = -1;
+	string lowest4 = findLowestCountStringInMap(doubleFreq);
+	increaseProbability(lowest4[0], 'q', 30, prob);
+	increaseProbability(lowest4[0], 'j', 30, prob);
+	increaseProbability(lowest4[0], 'x', 30, prob);
+	increaseProbability(lowest4[0], 'v', 30, prob);
+}
+
 //암호문 공격
 void startAttack() {
 	string encryptedFilePath = "ciphertext.txt"; //공격할 암호문 txt 경로
@@ -566,6 +687,9 @@ void startAttack() {
 	//===== 7단계 =====//
 	improveProbabilityBy_covid19(encryptedText, probability); //covid-19로 c v를 찾아낸다
 
+	//===== 8단계 =====//
+	improveProbabilityBy_double_alphabet(encryptedText, probability); //aa, bb, ..., zz처럼 2연속 오는 문자들의 카운트를 세서 자주 연속으로 나오는 문자일수록 확률을 높인다
+
 
 	//printProbability(probability);
 
@@ -583,6 +707,8 @@ void startAttack() {
 	writeKeyFile.close();
 
 	decrypt();
+
+	cout << "Done." << endl;
 }
 
 int main() {
